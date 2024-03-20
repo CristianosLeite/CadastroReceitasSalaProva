@@ -138,7 +138,7 @@ namespace CadastroReceitasSalaProva
         public bool IsPartnumberEmpty()
         {
             // Create AssociatePartnumber table if it doesn't exist
-            CreatePartnumberIndex();
+            CreatePartnumberTable();
 
             //Check if partnuber is not null
             using var connection = GetConnection();
@@ -159,15 +159,29 @@ namespace CadastroReceitasSalaProva
             return false;
         }
 
+        private void CreatePartnumberTable()
+        {
+            using var connection = GetConnection();
+            connection.Open();
+
+            var createTableCommand = new NpgsqlCommand(
+                "CREATE TABLE IF NOT EXISTS private.partnumber (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, description character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_pkey PRIMARY KEY (id)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber OWNER to postgres;",
+                connection
+            );
+            createTableCommand.ExecuteNonQuery();
+        }
+
         public void SavePartnumber(System.Collections.Generic.List<PartNumber> partnumberList)
         {
+            CreatePartnumberTable();
+
             using var connection = GetConnection();
             connection.Open();
 
             foreach (var partnumber in partnumberList)
             {
                 var insertCommand = new NpgsqlCommand(
-                    "INSERT INTO private.partnumber (desenho_motor, descricao) VALUES (@partnumber, @desciption);",
+                    "INSERT INTO private.partnumber (partnumber, description) VALUES (@partnumber, @desciption);",
                     connection
                 );
                 insertCommand.Parameters.AddWithValue("@partnumber", partnumber.Partnumber);
@@ -186,7 +200,7 @@ namespace CadastroReceitasSalaProva
             var partnumberList = new ObservableCollection<PartNumber>();
 
             using var command = new NpgsqlCommand(
-                "SELECT desenho_motor, descricao FROM private.partnumber;",
+                "SELECT partnumber, description FROM private.partnumber;",
                 connection
             );
             using var reader = command.ExecuteReader();
@@ -205,7 +219,7 @@ namespace CadastroReceitasSalaProva
             connection.Open();
 
             var deleteCommand = new NpgsqlCommand(
-                "DELETE FROM private.partnumber WHERE desenho_motor = @partnumber;",
+                "DELETE FROM private.partnumber WHERE partnumber = @partnumber;",
                 connection
             );
             deleteCommand.Parameters.AddWithValue("@partnumber", partnumber);
