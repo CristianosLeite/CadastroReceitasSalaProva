@@ -30,8 +30,7 @@ namespace CadastroReceitasSalaProva
 
     public partial class CreatePartnumber : Window
     {
-        readonly Database db =
-            new(DatabaseConfig.ConnectionString);
+        readonly Database db = new(DatabaseConfig.ConnectionString);
         private readonly string Recipe;
 
         public CreatePartnumber(string recipe)
@@ -52,19 +51,14 @@ namespace CadastroReceitasSalaProva
 
         private void BtnSalvarClick(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                db.SavePartnumber((List<PartNumber>)dgPartnumber.ItemsSource);
-                MessageBox.Show("Partnumber salvo com sucesso!");
-                Hide();
-                AssociatePartnumber partnumber = new(Recipe);
-                partnumber.ShowDialog();
-                Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
+            if (db.SavePartnumber((List<PartNumber>)dgPartnumber.ItemsSource) != 0)
+                return;
+
+            MessageBox.Show("Partnumber salvo com sucesso!");
+            Hide();
+            AssociatePartnumber partnumber = new(Recipe);
+            partnumber.ShowDialog();
+            Close();
         }
 
         private void BtnExcluirClick(object sender, RoutedEventArgs e) { }

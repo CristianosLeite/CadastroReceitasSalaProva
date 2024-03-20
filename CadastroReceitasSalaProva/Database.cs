@@ -2,7 +2,6 @@
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Windows;
-using System.Windows.Documents;
 using Npgsql;
 
 namespace CadastroReceitasSalaProva
@@ -36,6 +35,7 @@ namespace CadastroReceitasSalaProva
 
             using var reader = command.ExecuteReader();
             recipeList.Load(reader);
+
             return recipeList;
         }
 
@@ -150,13 +150,10 @@ namespace CadastroReceitasSalaProva
             );
             using var reader = command.ExecuteReader();
 
-            // If partnumber is empty, return true
             if (!reader.HasRows)
-            {
-                return true;
-            }
+                return false;
 
-            return false;
+            return true;
         }
 
         private void CreatePartnumberTable()
@@ -171,25 +168,39 @@ namespace CadastroReceitasSalaProva
             createTableCommand.ExecuteNonQuery();
         }
 
-        public void SavePartnumber(System.Collections.Generic.List<PartNumber> partnumberList)
+        public int SavePartnumber(System.Collections.Generic.List<PartNumber> partnumberList)
         {
             CreatePartnumberTable();
 
             using var connection = GetConnection();
             connection.Open();
 
-            foreach (var partnumber in partnumberList)
+            try
             {
-                var insertCommand = new NpgsqlCommand(
-                    "INSERT INTO private.partnumber (partnumber, description) VALUES (@partnumber, @desciption);",
-                    connection
+                foreach (var partnumber in partnumberList)
+                {
+                    var insertCommand = new NpgsqlCommand(
+                        "INSERT INTO private.partnumber (partnumber, description) VALUES (@partnumber, @desciption);",
+                        connection
+                    );
+                    insertCommand.Parameters.AddWithValue("@partnumber", partnumber.Partnumber);
+                    insertCommand.Parameters.AddWithValue("@desciption", partnumber.Description);
+                    insertCommand.ExecuteNonQuery();
+                }
+            }
+            catch (Npgsql.PostgresException)
+            {
+                MessageBox.Show(
+                    "Partnumber já cadastrado.",
+                    "Erro",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
                 );
-                insertCommand.Parameters.AddWithValue("@partnumber", partnumber.Partnumber);
-                insertCommand.Parameters.AddWithValue("@desciption", partnumber.Description);
-                insertCommand.ExecuteNonQuery();
+
+                return 1;
             }
 
-            connection.Close();
+            return 0;
         }
 
         public ObservableCollection<PartNumber> LoadPartnumberList()
@@ -242,21 +253,20 @@ namespace CadastroReceitasSalaProva
                 insertCommand.Parameters.AddWithValue("@recipeName", recipeName);
                 insertCommand.Parameters.AddWithValue("@partnumber", partnumber);
                 insertCommand.ExecuteNonQuery();
-                return 0;
             }
-            catch (Exception ex)
+            catch (Npgsql.PostgresException)
             {
-                if (ex.Message.Contains("23505"))
-                    MessageBox.Show(
-                        "Partnumber já associado a uma receita.",
-                        "Erro",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error
-                    );
+                MessageBox.Show(
+                    "Partnumber já associado a uma receita.",
+                    "Erro",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
 
-                _ = new Exception(ex.Message);
                 return 1;
             }
+
+            return 0;
         }
     }
 }
