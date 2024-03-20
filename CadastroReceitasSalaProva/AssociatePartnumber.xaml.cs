@@ -58,18 +58,12 @@ namespace CadastroReceitasSalaProva
         {
             foreach (PartNumber item in PartnumberList)
             {
-                try
+                if (item.IsSelected)
                 {
-                    if (item.IsSelected)
-                    {
-                        string partnumber = item.Partnumber.ToString()!.Split(' ')[0];
-                        db.InsertPartnumberIndex(Recipe, partnumber);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                    return;
+                    string partnumber = item.Partnumber.ToString()!.Split(' ')[0];
+
+                    if (db.InsertPartnumberIndex(Recipe, partnumber) != 0)
+                        return;
                 }
             }
 

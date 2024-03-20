@@ -123,18 +123,27 @@ namespace CadastroReceitasSalaProva
             }
         }
 
-        public bool IsPartnumberEmpty()
+        private void CreatePartnumberIndex()
         {
             using var connection = GetConnection();
             connection.Open();
-            // Create AssociatePartnumber table if it doesn't exist
-            var createPartnumberTableCommand = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS private.partnumber (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), desenho_motor character varying COLLATE pg_catalog.\"default\" NOT NULL, descricao character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_pkey PRIMARY KEY (id)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber OWNER to postgres;",
+
+            var createIndexCommand = new NpgsqlCommand(
+                "CREATE TABLE IF NOT EXISTS private.partnumber_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_index_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_partnumber\" UNIQUE (partnumber)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber_index OWNER to postgres;",
                 connection
             );
-            createPartnumberTableCommand.ExecuteNonQuery();
+            createIndexCommand.ExecuteNonQuery();
+        }
+
+        public bool IsPartnumberEmpty()
+        {
+            // Create AssociatePartnumber table if it doesn't exist
+            CreatePartnumberIndex();
 
             //Check if partnuber is not null
+            using var connection = GetConnection();
+            connection.Open();
+
             using var command = new NpgsqlCommand(
                 $"SELECT id FROM private.partnumber;",
                 connection
@@ -203,32 +212,37 @@ namespace CadastroReceitasSalaProva
             deleteCommand.ExecuteNonQuery();
         }
 
-        private void CreatePartnumberIndex()
-        {
-            using var connection = GetConnection();
-            connection.Open();
-
-            var createIndexCommand = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS private.partnumber_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_index_pkey PRIMARY KEY (id)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber_index OWNER to postgres;",
-                connection
-            );
-            createIndexCommand.ExecuteNonQuery();
-        }
-
-        public void InsertPartnumberIndex(string recipeName, string partnumber)
+        public int InsertPartnumberIndex(string recipeName, string partnumber)
         {
             CreatePartnumberIndex();
 
             using var connection = GetConnection();
             connection.Open();
 
-            var insertCommand = new NpgsqlCommand(
-                               "INSERT INTO private.partnumber_index (partnumber, recipe) VALUES (@partnumber, @recipename);",
-                                              connection
-                                                         );
-            insertCommand.Parameters.AddWithValue("@recipeName", recipeName);
-            insertCommand.Parameters.AddWithValue("@partnumber", partnumber);
-            insertCommand.ExecuteNonQuery();
-        }   
+            try
+            {
+                var insertCommand = new NpgsqlCommand(
+                    "INSERT INTO private.partnumber_index (partnumber, recipe) VALUES (@partnumber, @recipename);",
+                    connection
+                );
+                insertCommand.Parameters.AddWithValue("@recipeName", recipeName);
+                insertCommand.Parameters.AddWithValue("@partnumber", partnumber);
+                insertCommand.ExecuteNonQuery();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("23505"))
+                    MessageBox.Show(
+                        "Partnumber já associado a uma receita.",
+                        "Erro",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
+
+                _ = new Exception(ex.Message);
+                return 1;
+            }
+        }
     }
 }
