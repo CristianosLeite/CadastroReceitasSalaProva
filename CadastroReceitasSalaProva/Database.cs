@@ -129,7 +129,7 @@ namespace CadastroReceitasSalaProva
             connection.Open();
 
             var createIndexCommand = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS private.partnumber_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_index_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_partnumber\" UNIQUE (partnumber)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber_index OWNER to postgres;",
+                "CREATE TABLE IF NOT EXISTS private.partnumber_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_index_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_associateted\" UNIQUE (partnumber)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber_index OWNER to postgres;",
                 connection
             );
             createIndexCommand.ExecuteNonQuery();
@@ -165,7 +165,7 @@ namespace CadastroReceitasSalaProva
             connection.Open();
 
             var createTableCommand = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS private.partnumber (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, description character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_pkey PRIMARY KEY (id)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber OWNER to postgres;",
+                "CREATE TABLE IF NOT EXISTS private.partnumber (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, description character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_partnumber\" UNIQUE (partnumber)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber OWNER to postgres;",
                 connection
             );
             createTableCommand.ExecuteNonQuery();
