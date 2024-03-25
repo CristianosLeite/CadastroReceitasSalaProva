@@ -65,7 +65,7 @@ namespace CadastroReceitasSalaProva
             using var connection = GetConnection();
             connection.Open();
 
-            using var command = new NpgsqlCommand($"SELECT * FROM {recipeName};", connection);
+            using var command = new NpgsqlCommand($"SELECT * FROM \"{recipeName}\";", connection);
 
             try
             {
@@ -111,7 +111,7 @@ namespace CadastroReceitasSalaProva
             connection.Open();
 
             var checkTableExistsCommand = new NpgsqlCommand(
-                $"SELECT to_regclass('{recipeName}')::text;",
+                $"SELECT to_regclass('\"{recipeName}\"')::text;",
                 connection
             );
 

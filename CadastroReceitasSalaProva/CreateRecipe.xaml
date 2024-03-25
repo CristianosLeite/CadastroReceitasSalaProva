@@ -31,8 +31,8 @@
         <DataGrid x:Name="ParametersDataGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="True" Margin="0,5">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="200"/>
-                <DataGridTextColumn Header="T__Value__5" Binding="{Binding T_Value_5}" Width="100"/>
-                <DataGridTextColumn Header="T__Value__12" Binding="{Binding T_Value_12}" Width="100"/>
+                <DataGridTextColumn Header="T__Value__5" Binding="{Binding T_Value_5}" Width="120"/>
+                <DataGridTextColumn Header="T__Value__12" Binding="{Binding T_Value_12}" Width="120"/>
                 <DataGridTextColumn Header="Descrição" Binding="{Binding Description}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>

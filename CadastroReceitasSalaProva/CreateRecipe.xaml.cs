@@ -52,12 +52,7 @@ namespace CadastroReceitasSalaProva
         {
             InitializeComponent();
 
-            _recipeList = db.LoadRecipeList();
-            RecipeComboBox.ItemsSource ??= _recipeList;
-
-
-            // Add "New Recipe" at the top
-            _recipeList.Insert(0, "Nova Receita");
+            LoadRecipes();
 
             _parameters.CollectionChanged += (sender, e) =>
             {
@@ -139,6 +134,16 @@ namespace CadastroReceitasSalaProva
             return !string.IsNullOrEmpty(recipeName) && recipeName != "Nova Receita";
         }
 
+        private void ReturnInitialState()
+        {
+            _parameters.Clear();
+            RecipeComboBox.SelectedIndex = -1;
+            UploadRecipe.Visibility = Visibility.Hidden;
+            RecipeNameTxt.Visibility = Visibility.Hidden;
+            DeleteRecipe.Visibility = Visibility.Hidden;
+            SaveRecipeBtn.Visibility = Visibility.Hidden;
+        }
+
         private void SaveRecipeBtn_Click(object sender, RoutedEventArgs e)
         {
             string recipeName = RecipeNameTxt.Text;
@@ -178,6 +183,9 @@ namespace CadastroReceitasSalaProva
             db.SaveRecipe(recipeName, _parameters);
 
             MessageBox.Show($"Receita '{recipeName}' cadastrada com sucesso!");
+
+            ReturnInitialState();
+            LoadRecipes();
         }
 
         private bool RecipeExists(string recipeName)
@@ -213,12 +221,12 @@ namespace CadastroReceitasSalaProva
             Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.ContextIdle, null);
 
             // Load recipe list only if ItemsSource is null
-            RecipeComboBox.ItemsSource ??= db.LoadRecipeList();
-        }
+            _recipeList = db.LoadRecipeList();
 
-        private void ListBoxItem_Selected(object sender, RoutedEventArgs e)
-        {
-            LoadRecipes();
+            // Add "New Recipe" at the top
+            _recipeList.Insert(0, "Nova Receita");
+
+            RecipeComboBox.ItemsSource = _recipeList;
         }
 
         private static string GetCellValue(Cell cell, WorkbookPart workbookPart)
@@ -339,6 +347,7 @@ namespace CadastroReceitasSalaProva
                 db.DeleteRecipe(recipeName);
                 MessageBox.Show($"Receita '{recipeName}' excluída com sucesso!");
                 LoadRecipes();
+                ReturnInitialState();
             }
 
             return;
