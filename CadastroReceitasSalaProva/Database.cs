@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Npgsql;
 
 namespace CadastroReceitasSalaProva
@@ -51,9 +54,6 @@ namespace CadastroReceitasSalaProva
                 recipeList.Add(item: row[0].ToString()!);
             }
 
-            // Add "New Recipe" at the top
-            recipeList.Insert(0, "Nova Receita");
-
             return recipeList;
         }
 
@@ -80,7 +80,7 @@ namespace CadastroReceitasSalaProva
             return recipe;
         }
 
-        public void SaveRecipe(string recipeName, ObservableCollection<RecipeParameter> parameters)
+        public void SaveRecipe(string recipeName, ObservableCollection<Recipe> parameters)
         {
             using var connection = GetConnection();
             connection.Open();
@@ -118,18 +118,20 @@ namespace CadastroReceitasSalaProva
             var exists = checkTableExistsCommand.ExecuteScalar() != DBNull.Value;
             if (exists)
             {
-                var deleteCommand = new NpgsqlCommand($"DELETE FROM \"{recipeName}\";", connection);
+                var deleteCommand = new NpgsqlCommand($"DROP TABLE \"{recipeName}\";", connection);
                 deleteCommand.ExecuteNonQuery();
             }
         }
 
         private void CreatePartnumberIndex()
         {
+            CreatePartnumberTable();
+
             using var connection = GetConnection();
             connection.Open();
 
             var createIndexCommand = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS private.partnumber_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_index_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_associateted\" UNIQUE (partnumber)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber_index OWNER to postgres;",
+                "CREATE TABLE IF NOT EXISTS private.partnumber_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1 ), partnumber character varying COLLATE pg_catalog.\"default\" NOT NULL, recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, CONSTRAINT partnumber_index_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_associateted\" UNIQUE (partnumber), CONSTRAINT partnumber_fk FOREIGN KEY (partnumber) REFERENCES private.partnumber (partnumber)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.partnumber_index OWNER to postgres;",
                 connection
             );
             createIndexCommand.ExecuteNonQuery();
@@ -151,9 +153,9 @@ namespace CadastroReceitasSalaProva
             using var reader = command.ExecuteReader();
 
             if (!reader.HasRows)
-                return false;
+                return true;
 
-            return true;
+            return false;
         }
 
         private void CreatePartnumberTable()
@@ -168,43 +170,56 @@ namespace CadastroReceitasSalaProva
             createTableCommand.ExecuteNonQuery();
         }
 
-        public int SavePartnumber(System.Collections.Generic.List<PartNumber> partnumberList)
+        public int SavePartnumber(List<PartNumber> partnumberList)
         {
-            CreatePartnumberTable();
-
-            using var connection = GetConnection();
-            connection.Open();
+            if (partnumberList == null || partnumberList.Count == 0)
+            {
+                ShowErrorMessage("Partnumber Inválido!");
+                return 1;
+            }
 
             try
             {
+                using var connection = GetConnection();
+                connection.Open();
+
                 foreach (var partnumber in partnumberList)
                 {
-                    var insertCommand = new NpgsqlCommand(
-                        "INSERT INTO private.partnumber (partnumber, description) VALUES (@partnumber, @desciption);",
-                        connection
-                    );
-                    insertCommand.Parameters.AddWithValue("@partnumber", partnumber.Partnumber);
-                    insertCommand.Parameters.AddWithValue("@desciption", partnumber.Description);
-                    insertCommand.ExecuteNonQuery();
+                    InsertOrUpdatePartnumber(partnumber, connection);
                 }
             }
-            catch (Npgsql.PostgresException)
+            catch (PostgresException)
             {
-                MessageBox.Show(
-                    "Partnumber já cadastrado.",
-                    "Erro",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error
-                );
-
+                ShowErrorMessage("Não foi possível cadastrar o partnumber.");
                 return 1;
             }
 
             return 0;
         }
 
+        private static void InsertOrUpdatePartnumber(
+            PartNumber partnumber,
+            NpgsqlConnection connection
+        )
+        {
+            using var insertCommand = new NpgsqlCommand(
+                "INSERT INTO private.partnumber (partnumber, description) VALUES (@partnumber, @desciption) ON CONFLICT (partnumber) DO UPDATE SET description = @desciption;",
+                connection
+            );
+            insertCommand.Parameters.AddWithValue("@partnumber", partnumber.Partnumber);
+            insertCommand.Parameters.AddWithValue("@desciption", partnumber.Description);
+            insertCommand.ExecuteNonQuery();
+        }
+
+        private static void ShowErrorMessage(string message)
+        {
+            MessageBox.Show(message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
         public ObservableCollection<PartNumber> LoadPartnumberList()
         {
+            CreatePartnumberTable();
+
             using var connection = GetConnection();
             connection.Open();
 
@@ -224,17 +239,31 @@ namespace CadastroReceitasSalaProva
             return partnumberList;
         }
 
-        public void DeletePartnumber(string partnumber)
+        public int DeletePartnumber(string partnumber)
         {
-            using var connection = GetConnection();
-            connection.Open();
+            try
+            {
+                using var connection = GetConnection();
+                connection.Open();
 
-            var deleteCommand = new NpgsqlCommand(
-                "DELETE FROM private.partnumber WHERE partnumber = @partnumber;",
-                connection
-            );
-            deleteCommand.Parameters.AddWithValue("@partnumber", partnumber);
-            deleteCommand.ExecuteNonQuery();
+                var deleteCommand = new NpgsqlCommand(
+                    "DELETE FROM private.partnumber WHERE partnumber = @partnumber;",
+                    connection
+                );
+                deleteCommand.Parameters.AddWithValue("@partnumber", partnumber);
+                deleteCommand.ExecuteNonQuery();
+                return 0;
+            }
+            catch (PostgresException)
+            {
+                MessageBox.Show(
+                    $"Não foi possível deletar o partnumber. Verifique se existe associação à alguma receita.",
+                    "Erro",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+                return 1;
+            }
         }
 
         public int InsertPartnumberIndex(string recipeName, string partnumber)
@@ -267,6 +296,113 @@ namespace CadastroReceitasSalaProva
             }
 
             return 0;
+        }
+
+        public ObservableCollection<PartNumber> AssociatedPartnumbers(string recipeName)
+        {
+            using var connection = GetConnection();
+            connection.Open();
+
+            var partnumberList = new ObservableCollection<PartNumber>();
+
+            using var command = new NpgsqlCommand(
+                "SELECT partnumber FROM private.partnumber_index WHERE recipe = @recipeName;",
+                connection
+            );
+            command.Parameters.AddWithValue("@recipeName", recipeName);
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                partnumberList.Add(new PartNumber(reader.GetString(0), ""));
+            }
+
+            return partnumberList;
+        }
+
+        public ObservableCollection<string> AssociatedRecipes(string partnumber)
+        {
+            using var connection = GetConnection();
+            connection.Open();
+
+            var partnumberList = new ObservableCollection<string>();
+            using var command = new NpgsqlCommand(
+                "SELECT recipe FROM private.partnumber_index WHERE partnumber = @partnumber;",
+                connection
+            );
+            command.Parameters.AddWithValue("@partnumber", partnumber);
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                partnumberList.Add(reader.GetString(0)!);
+            }
+
+            return partnumberList;
+        }
+
+        public void DeletePartnumberIndex(string partnumber)
+        {
+            using var connection = GetConnection();
+            connection.Open();
+
+            var deleteCommand = new NpgsqlCommand(
+                "DELETE FROM private.partnumber_index WHERE partnumber = @partnumber;",
+                connection
+            );
+            deleteCommand.Parameters.AddWithValue("@partnumber", partnumber);
+            deleteCommand.ExecuteNonQuery();
+        }
+
+        public ObservableCollection<string> LoadAvailablePartnumbers()
+        {
+            CreatePartnumberIndex();
+
+            using var connection = GetConnection();
+            connection.Open();
+
+            DataTable dt = new();
+
+            ObservableCollection<string> ptnList = new();
+            using var command = new NpgsqlCommand(
+                "SELECT partnumber FROM private.partnumber WHERE partnumber NOT IN(SELECT partnumber FROM private.partnumber_index);",
+                connection
+            );
+            using var reader = command.ExecuteReader();
+            dt.Load(reader);
+
+            foreach (DataRow row in dt.Rows)
+            {
+                ptnList.Add(item: row[0].ToString()!);
+            }
+
+            return ptnList;
+        }
+
+        public ObservableCollection<string> LoadAssociatedPartnumbers(string recipe)
+        {
+            using var connection = GetConnection();
+            connection.Open();
+
+            DataTable dt = new();
+
+            ObservableCollection<string> ptnList = new();
+
+            using var command = new NpgsqlCommand(
+                "SELECT partnumber FROM private.partnumber_index WHERE recipe = @recipe;",
+                connection
+            );
+            command.Parameters.AddWithValue("@recipe", recipe);
+            using var reader = command.ExecuteReader();
+
+            dt.Load(reader);
+
+            foreach (DataRow row in dt.Rows)
+            {
+                ptnList.Add(item: row[0].ToString()!);
+            }
+
+            return ptnList;
         }
     }
 }

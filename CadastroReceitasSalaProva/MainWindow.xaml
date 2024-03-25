@@ -3,38 +3,72 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:CadastroReceitasSalaProva"
         mc:Ignorable="d"
-        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-        Background="{DynamicResource MaterialDesignPaper}"
         TextElement.FontWeight="Medium"
         TextElement.FontSize="14"
         FontFamily="{materialDesign:MaterialDesignFont}"
-        Title="Cadastrar Receita" Height="450" Width="800" WindowStartupLocation="CenterScreen">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        Height="600" Width="920" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="NoResize" Background="{x:Null}" AllowsTransparency="True" Loaded="Window_Loaded">
 
-        <StackPanel Orientation="Horizontal" Grid.Row="0">
-            <ComboBox x:Name="RecipeComboBox" Width="200" Margin="0,0,10,0" SelectionChanged="RecipeComboBox_SelectionChanged">
-            </ComboBox>
-            <Button x:Name="UploadRecipe" Content="Carregar Receita" Click="UploadRecipeBtn_Click" Visibility="Hidden"/>
-            <TextBox x:Name="RecipeNameTxt" Width="200" Margin="10,0,0,0" Visibility="Hidden"/>
-        </StackPanel>
-
-        <DataGrid x:Name="ParametersDataGrid" Grid.Row="1" AutoGenerateColumns="False" CanUserAddRows="True" Margin="0,5">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="200"/>
-                <DataGridTextColumn Header="T__Value__5" Binding="{Binding T_Value_5}" Width="100"/>
-                <DataGridTextColumn Header="T__Value__12" Binding="{Binding T_Value_12}" Width="100"/>
-                <DataGridTextColumn Header="Descrição" Binding="{Binding Description}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <Button x:Name="SaveRecipeBtn" Content="Salvar Receita" Grid.Row="2" Click="SaveRecipeBtn_Click" Visibility="Hidden"/>
+    <Grid>
+        <materialDesign:Card Margin="10" UniformCornerRadius="15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="10*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.Resources>
+                    <Style TargetType="materialDesign:PackIcon">
+                        <Setter Property="Width" Value="30"></Setter>
+                        <Setter Property="Height" Value="30"></Setter>
+                    </Style>
+                </Grid.Resources>
+                <Grid Grid.Column="0">
+                    <ListView Margin="0">
+                        <ListViewItem HorizontalAlignment="Center" Margin="0" ToolTip="Conecsa Automação e Ti" Focusable="False">
+                            <StackPanel Margin="5" Focusable="False">
+                                <Image x:Name="Logo" Source="/logo.png" Width="50" Height="50"/>
+                            </StackPanel>
+                        </ListViewItem>
+                        <ListViewItem HorizontalAlignment="Center" Margin="0 10" ToolTip="Receitas">
+                            <Button Style="{StaticResource MaterialDesignFloatingActionButton}" HorizontalAlignment="Left"
+                                 BorderBrush="{x:Null}" Background="{x:Null}" Foreground="YellowGreen" Click="Button_Click_2">
+                                <StackPanel Margin="5">
+                                    <materialDesign:PackIcon Kind="FormatListBulleted"/>
+                                </StackPanel>
+                            </Button>
+                        </ListViewItem>
+                        <ListViewItem HorizontalAlignment="Center" Margin="0 10" ToolTip="Desenho Motor">
+                            <Button Style="{StaticResource MaterialDesignFloatingActionButton}" HorizontalAlignment="Left"
+                                 BorderBrush="{x:Null}" Background="{x:Null}" Foreground="YellowGreen" Click="Button_Click_3">
+                                <StackPanel Margin="5">
+                                    <materialDesign:PackIcon Kind="EngineOutline"/>
+                                </StackPanel>
+                            </Button>
+                        </ListViewItem>
+                        <ListViewItem HorizontalAlignment="Center" Margin="0 10" ToolTip="Associações">
+                            <Button Style="{StaticResource MaterialDesignFloatingActionButton}" HorizontalAlignment="Left"
+                                     BorderBrush="{x:Null}" Background="{x:Null}" Foreground="YellowGreen" Click="Button_Click_4">
+                                <StackPanel Margin="5">
+                                    <materialDesign:PackIcon Kind="CompareHorizontal"/>
+                                </StackPanel>
+                            </Button>
+                        </ListViewItem>
+                        <ListViewItem HorizontalAlignment="Center" Margin="0 40 0 0" ToolTip="Sair">
+                            <Button Style="{StaticResource MaterialDesignFloatingActionButton}" HorizontalAlignment="Left"
+                                 BorderBrush="{x:Null}" Background="{x:Null}" Foreground="YellowGreen" Click="Button_Click_1">
+                                <StackPanel Margin="5">
+                                    <materialDesign:PackIcon Kind="ExitToApp"/>
+                                </StackPanel>
+                            </Button>
+                        </ListViewItem>
+                    </ListView>
+                </Grid>
+                <Grid Grid.Column="1" Name="Header" Margin="0,0,0,511"/>
+                <Grid Grid.Column="1" Background="DarkGray" Name="RenderPages" Margin="0,69,0,0"/>
+            </Grid>
+        </materialDesign:Card>
     </Grid>
 </Window>

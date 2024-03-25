@@ -1,10 +1,8 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,74 +12,112 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using CheckBox = System.Windows.Controls.CheckBox;
+using System.Collections.Specialized;
 
 namespace CadastroReceitasSalaProva
 {
-    public partial class AssociatePartnumber : Window
+    public partial class AssociatePartnumber : UserControl
     {
-        readonly Database db =
-            new(DatabaseConfig.ConnectionString);
-        
-        private readonly string Recipe;
+        readonly Database db = new(DatabaseConfig.ConnectionString);
 
-        public ObservableCollection<PartNumber> PartnumberList { get; set; } = new();
+        public string SelectedRecipe { get; set; }
+        public string SelectedPartnumber { get; set; }
 
-        public AssociatePartnumber(string recipe)
+        private int Index;
+
+        public ObservableCollection<string> _recipeList = new();
+        public ObservableCollection<string> AvailablePartnumbers = new();
+        public ObservableCollection<string> AssociatedPartnumber = new();
+
+        public AssociatePartnumber()
         {
-            Recipe = recipe;
-
-            LoadPartnumberList();
             InitializeComponent();
+            LoadRecipeList();
+
+            SelectedRecipe = "";
+            SelectedPartnumber = "";
+
+            _recipeList.CollectionChanged += (sender, e) =>
+            {
+                if (e.Action == NotifyCollectionChangedAction.Add)
+                    recipeList.ItemsSource = _recipeList;
+            };
         }
 
-        public void LoadPartnumberList()
+        public void LoadRecipeList()
         {
-            PartnumberList = db.LoadPartnumberList();
-
-            foreach (PartNumber partnumber in PartnumberList)
-            {
-                ptnList?.Items.Add(partnumber.Partnumber + ' ' + partnumber.Description);
-            }
+            _recipeList.Clear();
+            _recipeList = db.LoadRecipeList();
+            recipeList.ItemsSource ??= _recipeList;
 
             DataContext = this;
         }
 
-        private void BtnCreateClick(object sender, RoutedEventArgs e)
+        public void LoadAvailablePartnumbers()
         {
-            CreatePartnumber createPartnumber = new(Recipe);
-            Hide();
-            createPartnumber.ShowDialog();
+            AvailablePartnumbers = db.LoadAvailablePartnumbers();
+            lbAvailablePartnumbers.ItemsSource ??= AvailablePartnumbers;
         }
 
-        private void BtnAssociateClick(object sender, RoutedEventArgs e)
+        public void LoadAssociatedPartnumbers()
         {
-            foreach (PartNumber item in PartnumberList)
-            {
-                if (item.IsSelected)
-                {
-                    string partnumber = item.Partnumber.ToString()!.Split(' ')[0];
+            AssociatedPartnumber = db.LoadAssociatedPartnumbers(SelectedRecipe);
+            lbAssociatedPartnumbers.ItemsSource ??= AssociatedPartnumber;
+        }
 
-                    if (db.InsertPartnumberIndex(Recipe, partnumber) != 0)
-                        return;
-                }
+        public void SelectedItemChanged(object sender, RoutedEventArgs e)
+        {
+            Index = lbAvailablePartnumbers.SelectedIndex;
+        }
+
+        private void SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            SelectedRecipe = (string)recipeList.SelectedItem;
+
+            lbAvailablePartnumbers.ClearValue(ItemsControl.ItemsSourceProperty);
+            lbAssociatedPartnumbers.ClearValue(ItemsControl.ItemsSourceProperty);
+            LoadAvailablePartnumbers();
+            LoadAssociatedPartnumbers();
+        }
+
+        private void AssociateBtnClick(object sender, RoutedEventArgs e)
+        {
+            if (Index == -1)
+            {
+                MessageBox.Show(
+                    "Selecione um partnumber para associar",
+                    "Erro",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+                return;
             }
 
-            MessageBox.Show("Partnumber associado com sucesso!");
-            Close();
+            db.InsertPartnumberIndex(SelectedRecipe, AvailablePartnumbers[Index]);
+
+            SelectionChanged(sender, e);
+
+            Index = -1;
         }
 
-        public void ChangeSelection(object sender, RoutedEventArgs e)
+        private void RemoveAssociation(object sender, RoutedEventArgs e)
         {
-            CheckBox checkBox = (CheckBox)sender;
-            PartNumber selectedPartNumber = (PartNumber)checkBox.DataContext;
-            int index = PartnumberList.IndexOf(selectedPartNumber);
-
-            PartnumberList[index].IsSelected = checkBox.IsChecked switch
+            if (lbAssociatedPartnumbers.SelectedIndex == -1)
             {
-                true => true,
-                _ => false,
-            };
+                MessageBox.Show(
+                    "Selecione um partnumber para desassociar",
+                    "Erro",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+                return;
+            }
+
+            db.DeletePartnumberIndex(AssociatedPartnumber[lbAssociatedPartnumbers.SelectedIndex]);
+
+            SelectionChanged(sender, e);
+
+            Index = -1;
         }
     }
 }
