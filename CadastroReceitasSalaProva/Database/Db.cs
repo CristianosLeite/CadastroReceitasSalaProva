@@ -4,16 +4,17 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using CadastroReceitasSalaProva.Interfaces;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Npgsql;
 
 namespace CadastroReceitasSalaProva
 {
-    public class Database
+    public class Db
     {
         private readonly string _connectionString;
 
-        public Database(string connectionString)
+        public Db(string connectionString)
         {
             _connectionString = connectionString;
         }
@@ -72,7 +73,7 @@ namespace CadastroReceitasSalaProva
                 using var reader = command.ExecuteReader();
                 recipe.Load(reader);
             }
-            catch (Npgsql.PostgresException)
+            catch (PostgresException)
             {
                 return recipe;
             }
@@ -137,27 +138,6 @@ namespace CadastroReceitasSalaProva
             createIndexCommand.ExecuteNonQuery();
         }
 
-        public bool IsPartnumberEmpty()
-        {
-            // Create AssociatePartnumber table if it doesn't exist
-            CreatePartnumberTable();
-
-            //Check if partnuber is not null
-            using var connection = GetConnection();
-            connection.Open();
-
-            using var command = new NpgsqlCommand(
-                $"SELECT id FROM private.partnumber;",
-                connection
-            );
-            using var reader = command.ExecuteReader();
-
-            if (!reader.HasRows)
-                return true;
-
-            return false;
-        }
-
         private void CreatePartnumberTable()
         {
             using var connection = GetConnection();
@@ -174,7 +154,7 @@ namespace CadastroReceitasSalaProva
         {
             if (partnumberList == null || partnumberList.Count == 0)
             {
-                ShowErrorMessage("Partnumber Inválido!");
+                ShowErrorMessage("Recipe Inválido!");
                 return 1;
             }
 
@@ -283,10 +263,10 @@ namespace CadastroReceitasSalaProva
                 insertCommand.Parameters.AddWithValue("@partnumber", partnumber);
                 insertCommand.ExecuteNonQuery();
             }
-            catch (Npgsql.PostgresException)
+            catch (PostgresException)
             {
                 MessageBox.Show(
-                    "Partnumber já associado a uma receita.",
+                    "Recipe já associado a uma receita.",
                     "Erro",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error
@@ -296,28 +276,6 @@ namespace CadastroReceitasSalaProva
             }
 
             return 0;
-        }
-
-        public ObservableCollection<PartNumber> AssociatedPartnumbers(string recipeName)
-        {
-            using var connection = GetConnection();
-            connection.Open();
-
-            var partnumberList = new ObservableCollection<PartNumber>();
-
-            using var command = new NpgsqlCommand(
-                "SELECT partnumber FROM private.partnumber_index WHERE recipe = @recipeName;",
-                connection
-            );
-            command.Parameters.AddWithValue("@recipeName", recipeName);
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                partnumberList.Add(new PartNumber(reader.GetString(0), ""));
-            }
-
-            return partnumberList;
         }
 
         public ObservableCollection<string> AssociatedRecipes(string partnumber)
@@ -403,6 +361,79 @@ namespace CadastroReceitasSalaProva
             }
 
             return ptnList;
+        }
+
+        private void CreateLabelIndexTable()
+        {
+            using var connection = GetConnection();
+            connection.Open();
+
+            var createTableCommand = new NpgsqlCommand(
+                "CREATE TABLE IF NOT EXISTS private.label_index (id bigint NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1), recipe character varying COLLATE pg_catalog.\"default\" NOT NULL, min_empty_5 character varying COLLATE pg_catalog.\"default\", max_empty_5 character varying COLLATE pg_catalog.\"default\", pw_5 character varying COLLATE pg_catalog.\"default\", min_empty_12 character varying COLLATE pg_catalog.\"default\", max_empty_12 character varying COLLATE pg_catalog.\"default\", pw_12 character varying COLLATE pg_catalog.\"default\", CONSTRAINT labels_pkey PRIMARY KEY (id), CONSTRAINT \"UQ_labels\" UNIQUE (recipe)) TABLESPACE pg_default; ALTER TABLE IF EXISTS private.label_index OWNER to postgres;",
+                connection
+            );
+            createTableCommand.ExecuteNonQuery();
+        }
+
+        public void SaveLabelIndex(
+            LabelIndex lbIndex
+        )
+        {
+            CreateLabelIndexTable();
+
+            using var connection = GetConnection();
+            connection.Open();
+
+            var insertCommand = new NpgsqlCommand(
+                "INSERT INTO private.label_index (recipe, min_empty_5, max_empty_5, pw_5, min_empty_12, max_empty_12, pw_12) VALUES (@recipe, @min_empty_12, @max_empty_12, @pw_12, @min_empty_12, @max_empty_12, @pw_12) ON CONFLICT (recipe) DO UPDATE SET min_empty_5 = @min_empty_5, max_empty_5 = @max_empty_5, pw_5 = @pw_5, min_empty_12 = @min_empty_12, max_empty_12 = @max_empty_12, pw_12 = @pw_12;",
+                connection
+            );
+
+            insertCommand.Parameters.AddWithValue("@recipe", lbIndex.Recipe);
+            insertCommand.Parameters.AddWithValue("@min_empty_5", lbIndex.MinEmpty5);
+            insertCommand.Parameters.AddWithValue("@max_empty_5", lbIndex.MaxEmpty5);
+            insertCommand.Parameters.AddWithValue("@pw_5", lbIndex.Pw5);
+
+            insertCommand.Parameters.AddWithValue("@min_empty_12", lbIndex.MinEmpty12);
+            insertCommand.Parameters.AddWithValue("@max_empty_12", lbIndex.MaxEmpty12);
+            insertCommand.Parameters.AddWithValue("@pw_12", lbIndex.Pw12);
+            insertCommand.ExecuteNonQuery();
+        }
+
+        public LabelIndex LoadLabelIndex(string recipe)
+        {
+            CreateLabelIndexTable();
+
+            LabelIndex dt = new();
+
+            using var connection = GetConnection();
+            connection.Open();
+
+            using var command = new NpgsqlCommand(
+                "SELECT min_empty_5, max_empty_5, pw_5, min_empty_12, max_empty_12, pw_12 FROM private.label_index WHERE recipe = @recipe;",
+                connection
+            );
+            command.Parameters.AddWithValue("@recipe", recipe);
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                if (!reader.IsDBNull(0) && !reader.IsDBNull(1) && !reader.IsDBNull(2))
+                {
+                    dt.MinEmpty5 = reader.GetString(0);
+                    dt.MaxEmpty5 = reader.GetString(1);
+                    dt.Pw5 = reader.GetString(2);
+                }
+
+                if (!reader.IsDBNull(3) && !reader.IsDBNull(4) && !reader.IsDBNull(5))
+                {
+                    dt.MinEmpty12 = reader.GetString(3);
+                    dt.MaxEmpty12 = reader.GetString(4);
+                    dt.Pw12 = reader.GetString(5);
+                }
+            }
+
+            return dt;
         }
     }
 }

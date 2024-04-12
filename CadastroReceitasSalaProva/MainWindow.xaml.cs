@@ -14,9 +14,9 @@ using System.Windows.Shapes;
 
 namespace CadastroReceitasSalaProva
 {
-    public partial class MainWindow : Window
+    public partial class CreateRecipeMainWindow : Window
     {
-        public MainWindow()
+        public CreateRecipeMainWindow()
         {
             InitializeComponent();
         }

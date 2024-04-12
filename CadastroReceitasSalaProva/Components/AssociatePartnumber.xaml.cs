@@ -13,12 +13,13 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Collections.Specialized;
+using CadastroReceitasSalaProva.Database;
 
 namespace CadastroReceitasSalaProva
 {
     public partial class AssociatePartnumber : UserControl
     {
-        readonly Database db = new(DatabaseConfig.ConnectionString);
+        readonly Db db = new(DatabaseConfig.ConnectionString);
 
         public string SelectedRecipe { get; set; }
         public string SelectedPartnumber { get; set; }

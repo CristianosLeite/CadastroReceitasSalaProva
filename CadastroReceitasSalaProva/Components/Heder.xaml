@@ -11,7 +11,8 @@
              TextElement.FontWeight="Medium"
              TextElement.FontSize="14"
              FontFamily="{materialDesign:MaterialDesignFont}"
-             d:DesignHeight="150" d:DesignWidth="828">
+             d:DesignHeight="150" d:DesignWidth="828"
+             MouseLeftButtonDown="UserControl_MouseLeftButtonDown">
     <Grid>
         <TextBlock Text="Cadastro de Receitas SPM3" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" FontWeight="Bold"/>
     </Grid>

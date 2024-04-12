@@ -24,5 +24,13 @@ namespace CadastroReceitasSalaProva
         {
             InitializeComponent();
         }
+
+        private void UserControl_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                Window.GetWindow(this)?.DragMove();
+            }
+        }
     }
 }

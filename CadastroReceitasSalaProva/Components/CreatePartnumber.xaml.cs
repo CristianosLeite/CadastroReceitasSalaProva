@@ -16,6 +16,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using CadastroReceitasSalaProva.Database;
 
 namespace CadastroReceitasSalaProva
 {
@@ -33,7 +34,7 @@ namespace CadastroReceitasSalaProva
 
     public partial class CreatePartnumber : UserControl
     {
-        readonly Database db = new(DatabaseConfig.ConnectionString);
+        readonly Db db = new(DatabaseConfig.ConnectionString);
 
         public ObservableCollection<PartNumber> _partnumberList = new();
 
@@ -74,7 +75,7 @@ namespace CadastroReceitasSalaProva
             if (_partnumberList.GroupBy(p => p.Partnumber).Any(g => g.Count() > 1))
             {
                 MessageBox.Show(
-                    "Partnumber duplicado.",
+                    "Recipe duplicado.",
                     "",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error
@@ -91,7 +92,7 @@ namespace CadastroReceitasSalaProva
             if (db.SavePartnumber(_partnumberList.ToList()) != 0)
                 return;
 
-            MessageBox.Show("Partnumber salvo com sucesso!");
+            MessageBox.Show("Recipe salvo com sucesso!");
         }
 
         public void LoadPartnumberList()
@@ -126,7 +127,7 @@ namespace CadastroReceitasSalaProva
 
                 _partnumberList.RemoveAt(Index);
 
-                MessageBox.Show("Partnumber excluído com sucesso!");
+                MessageBox.Show("Recipe excluído com sucesso!");
             }
 
             dgPartnumber.Items.Refresh();

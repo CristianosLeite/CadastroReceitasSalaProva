@@ -17,6 +17,10 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using CadastroReceitasSalaProva.Database;
+using CadastroReceitasSalaProva.Interfaces;
+using DocumentFormat.OpenXml.Drawing.Charts;
+using DocumentFormat.OpenXml.ExtendedProperties;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.Win32;
@@ -25,7 +29,7 @@ using Microsoft.Win32;
 
 namespace CadastroReceitasSalaProva
 {
-    public class Recipe
+    public class Recipe : LabelIndex
     {
         public string Tag { get; set; }
         public string T_Value_5 { get; set; }
@@ -46,7 +50,7 @@ namespace CadastroReceitasSalaProva
         private readonly ObservableCollection<Recipe> _parameters = new();
         public ObservableCollection<string> _recipeList = new();
 
-        readonly Database db = new(DatabaseConfig.ConnectionString);
+        readonly Db db = new(DatabaseConfig.ConnectionString);
 
         public CreateRecipe()
         {
@@ -59,11 +63,35 @@ namespace CadastroReceitasSalaProva
                 if (e.Action == NotifyCollectionChangedAction.Add)
                     ParametersDataGrid.ItemsSource = _parameters;
             };
+
+            string[] _cbxValues = new string[10]
+            {
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10"
+            };
+
+            MinEmpty5.ItemsSource = _cbxValues;
+            MaxEmpty5.ItemsSource = _cbxValues;
+            Pw5.ItemsSource = _cbxValues;
+
+            MinEmpty12.ItemsSource = _cbxValues;
+            MaxEmpty12.ItemsSource = _cbxValues;
+            Pw12.ItemsSource = _cbxValues;
         }
 
-        private void SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void RecipeSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             string selectedRecipe = (string)RecipeComboBox.SelectedItem;
+            LabelsParamters5.Visibility = Visibility.Visible;
+            LabelsParamters12.Visibility = Visibility.Visible;
 
             if (selectedRecipe == "Nova Receita")
             {
@@ -84,24 +112,59 @@ namespace CadastroReceitasSalaProva
         {
             // Clear existing parameters when creating a new recipe
             _parameters.Clear();
+            
+            MinEmpty5.SelectedIndex = -1;
+            MaxEmpty5.SelectedIndex = -1;
+            Pw5.SelectedIndex = -1;
+
+            MinEmpty12.SelectedIndex = -1;
+            MaxEmpty12.SelectedIndex = -1;
+            Pw12.SelectedIndex = -1;
+
             RecipeNameTxt.Text = "Nova Receita";
             RecipeComboBox.SelectedIndex = 0;
             UploadRecipe.Visibility = Visibility.Visible;
             RecipeNameTxt.Visibility = Visibility.Visible;
             DeleteRecipe.Visibility = Visibility.Hidden;
+            ParametersDataGrid.Visibility = Visibility.Visible;
         }
 
         private void HandleExistingRecipeSelection(string selectedRecipe)
         {
-            // Load recipe list only if ItemsSource is null
-            RecipeComboBox.ItemsSource ??= db.LoadRecipeList();
+            _parameters.Clear();
+            
+            MinEmpty5.SelectedIndex = -1;
+            MaxEmpty5.SelectedIndex = -1;
+            Pw5.SelectedIndex = -1;
 
-            LoadRecipe(selectedRecipe);
+            MinEmpty12.SelectedIndex = -1;
+            MaxEmpty12.SelectedIndex = -1;
+            Pw12.SelectedIndex = -1;
+
+            if (RecipeComboBox.SelectedIndex != -1)
+            {
+                LoadRecipe(selectedRecipe);
+                LoadLabelIndex(selectedRecipe);
+            }
 
             RecipeNameTxt.Text = selectedRecipe;
             UploadRecipe.Visibility = Visibility.Hidden;
             RecipeNameTxt.Visibility = Visibility.Hidden;
             DeleteRecipe.Visibility = Visibility.Visible;
+            ParametersDataGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ReturnInitialState()
+        {
+            _parameters.Clear();
+            RecipeComboBox.SelectedIndex = -1;
+            UploadRecipe.Visibility = Visibility.Hidden;
+            RecipeNameTxt.Visibility = Visibility.Hidden;
+            DeleteRecipe.Visibility = Visibility.Hidden;
+            SaveRecipeBtn.Visibility = Visibility.Hidden;
+            LabelsParamters5.Visibility = Visibility.Hidden;
+            LabelsParamters12.Visibility = Visibility.Hidden;
+            ParametersDataGrid.Visibility = Visibility.Hidden;
         }
 
         private void LoadRecipe(string recipeName)
@@ -133,15 +196,33 @@ namespace CadastroReceitasSalaProva
         {
             return !string.IsNullOrEmpty(recipeName) && recipeName != "Nova Receita";
         }
+        
+        private bool ValidateLabelParameters()
+        { 
+            //Verify if T_Value_5 is filled
+            foreach (var item in _parameters)
+            {
+                if (item.T_Value_5 != "0" && item.T_Value_5 != string.Empty)
+                {
+                    //MinEmpty5, MaxEmpty5 and Pw5 must contain a value
+                    if (MinEmpty5.SelectedIndex == -1 || MaxEmpty5.SelectedIndex == -1 || Pw5.SelectedIndex == -1)
+                    {
+                        MessageBox.Show("Por favor, selecione os passos de mínima, máxima e potência.");
+                        return false;
+                    }
+                }
+                if (item.T_Value_12 != "0" && item.T_Value_12 != string.Empty)
+                {
+                    //MinEmpty5, MaxEmpty5 and Pw5 must contain a value
+                    if (MinEmpty12.SelectedIndex == -1 || MaxEmpty12.SelectedIndex == -1 || Pw12.SelectedIndex == -1)
+                    {
+                        MessageBox.Show("Por favor, selecione os passos de mínima, máxima e potência.");
+                        return false;
+                    }
+                }
+            }
 
-        private void ReturnInitialState()
-        {
-            _parameters.Clear();
-            RecipeComboBox.SelectedIndex = -1;
-            UploadRecipe.Visibility = Visibility.Hidden;
-            RecipeNameTxt.Visibility = Visibility.Hidden;
-            DeleteRecipe.Visibility = Visibility.Hidden;
-            SaveRecipeBtn.Visibility = Visibility.Hidden;
+            return true;
         }
 
         private void SaveRecipeBtn_Click(object sender, RoutedEventArgs e)
@@ -154,6 +235,13 @@ namespace CadastroReceitasSalaProva
                 MessageBox.Show("Por favor, entre com um nome válido.");
                 return;
             }
+
+            // Validate parameters before saving
+            ValidateRecipeParams(_parameters);
+
+            //Check if labels parameters are valid
+            if (!ValidateLabelParameters())
+                return;
 
             // Check if recipe already exists
             if (RecipeExists(recipeName))
@@ -171,16 +259,25 @@ namespace CadastroReceitasSalaProva
                 }
             }
 
+            //Remove already existing recipe
             db.DeleteRecipe(recipeName);
-
-            // Validate parameters before saving
-            if (!ParametersAreValid(_parameters))
-            {
-                return;
-            }
 
             // Save the recipe to the database
             db.SaveRecipe(recipeName, _parameters);
+
+            //Save the labels parameters
+            LabelIndex labelIndex = new()
+            {
+                Recipe = recipeName,
+                MinEmpty5 = MinEmpty5.Text,
+                MaxEmpty5 = MaxEmpty5.Text,
+                Pw5 = Pw5.Text,
+                MinEmpty12 = MinEmpty12.Text,
+                MaxEmpty12 = MaxEmpty12.Text,
+                Pw12 = Pw12.Text
+            };
+
+            db.SaveLabelIndex(labelIndex);
 
             MessageBox.Show($"Receita '{recipeName}' cadastrada com sucesso!");
 
@@ -195,7 +292,7 @@ namespace CadastroReceitasSalaProva
             return reader.Rows.Count > 0;
         }
 
-        private static bool ParametersAreValid(ObservableCollection<Recipe> parameters)
+        private static void ValidateRecipeParams(ObservableCollection<Recipe> parameters)
         {
             bool validation = parameters.All(param =>
                 !string.IsNullOrEmpty(param.Tag)
@@ -206,10 +303,44 @@ namespace CadastroReceitasSalaProva
 
             if (!validation)
             {
-                MessageBox.Show("Por favor, preencha todos os campos antes de salvar a receita.");
-            }
+                foreach (var param in parameters)
+                {
+                    if (string.IsNullOrEmpty(param.Tag))
+                    {
+                        param.Tag = "0";
+                    }
 
-            return validation;
+                    if (string.IsNullOrEmpty(param.T_Value_5))
+                    {
+                        param.T_Value_5 = "0";
+                    }
+
+                    if (string.IsNullOrEmpty(param.T_Value_12))
+                    {
+                        param.T_Value_12 = "0";
+                    }
+
+                    if (string.IsNullOrEmpty(param.Description))
+                    {
+                        param.Description = "0";
+                    }
+                }
+
+            }
+        }
+
+        private void LoadLabelIndex(string recipeName)
+        {
+            //Load label index parameters
+            LabelIndex labelIndex = db.LoadLabelIndex(recipeName);     
+
+            MinEmpty5.Text = labelIndex.MinEmpty5;
+            MaxEmpty5.Text = labelIndex.MaxEmpty5;
+            Pw5.Text = labelIndex.Pw5;
+
+            MinEmpty12.Text = labelIndex.MinEmpty12;
+            MaxEmpty12.Text = labelIndex.MaxEmpty12;
+            Pw12.Text = labelIndex.Pw12;
         }
 
         private void LoadRecipes()
@@ -354,3 +485,4 @@ namespace CadastroReceitasSalaProva
         }
     }
 }
+#pragma warning restore IDE1006
